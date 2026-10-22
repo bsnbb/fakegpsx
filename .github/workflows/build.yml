@@ -30,18 +30,20 @@ jobs:
           gradle-version: '8.9'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          yes | sdkmanager --licenses
 
       - name: Extract Android source
         run: |
           mkdir -p source
           unzip -o "FakeWalkerX_Android源码初始版.zip" -d source
-          echo "===== Extracted files ====="
+          echo "===== Source files ====="
           find source -maxdepth 4 -type f | head -100
 
       - name: Locate Android project
@@ -49,15 +51,14 @@ jobs:
           SETTINGS_FILE=$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -1)
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "ERROR: settings.gradle or settings.gradle.kts not found"
-            echo "Checking extracted directory structure:"
+            echo "ERROR: Gradle settings file not found"
             find source -maxdepth 5 -type f | head -200
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project directory: $PROJECT_DIR"
+          echo "Found project: $PROJECT_DIR"
 
       - name: Build Debug APK
         run: |
@@ -67,27 +68,25 @@ jobs:
             chmod +x gradlew
             ./gradlew assembleDebug --stacktrace
           else
-            echo "Gradle Wrapper not found; using installed Gradle"
             gradle assembleDebug --stacktrace
           fi
 
       - name: Verify APK
         run: |
-          echo "Searching for generated APK files..."
-          find "$PROJECT_DIR" -type f -name "*.apk"
+          mkdir -p output
 
-          APK=$(find "$PROJECT_DIR" -type f -path "*/build/outputs/apk/debug/*.apk" | head -1)
+          APK=$(find "$PROJECT_DIR" -type f \
+            -path "*/build/outputs/apk/debug/*.apk" | head -1)
 
           if [ -z "$APK" ]; then
-            echo "ERROR: APK was not generated"
+            echo "ERROR: APK not generated"
             exit 1
           fi
 
-          echo "APK generated successfully: $APK"
-          mkdir -p "$GITHUB_WORKSPACE/output"
-          cp "$APK" "$GITHUB_WORKSPACE/output/FakeWalkerX-debug.apk"
+          cp "$APK" output/FakeWalkerX-debug.apk
+          ls -lh output/FakeWalkerX-debug.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: FakeWalkerX-debug-apk
