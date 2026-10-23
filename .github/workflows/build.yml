@@ -22,10 +22,13 @@ uses: actions/checkout@v4
       gradle-version: '8.9'
 
   - name: Check files
-    run: ls -la
+    run: |
+      echo "===== Repository root ====="
+      ls -la
 
   - name: Find Gradle configuration
-    run: find . -maxdepth 5 -type f -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'settings.gradle' -o -name 'settings.gradle.kts'
+    run: |
+      find . -maxdepth 5 -type f -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'settings.gradle' -o -name 'settings.gradle.kts'
 
   - name: Build APK
     run: gradle assembleDebug --stacktrace
