@@ -34,8 +34,9 @@ jobs:
       - name: Install Android SDK components
         shell: bash
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          set -e
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Check source archive
         shell: bash
