@@ -35,7 +35,12 @@ jobs:
         shell: bash
         run: |
           set -e
+          # sdkmanager may exit after accepting licenses, causing `yes` to receive SIGPIPE.
+          # Temporarily disable pipefail for this pipeline so that harmless Broken pipe
+          # from `yes` does not fail the workflow.
+          set +o pipefail
           yes | sdkmanager --licenses
+          set -o pipefail
           sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Check source archive
