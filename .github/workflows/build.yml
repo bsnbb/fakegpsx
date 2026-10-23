@@ -52,20 +52,33 @@ jobs:
       - name: Extract Android project
         shell: bash
         run: |
+          set -e
           mkdir -p extracted
           unzip -q "FakeWalkerX2_全新项目源码-1.zip" -d extracted
           echo "Extracted files:"
-          find extracted -maxdepth 3 -type f | head -80
-          test -f extracted/FakeWalkerX2/settings.gradle
-          test -f extracted/FakeWalkerX2/app/build.gradle
+          find extracted -maxdepth 4 -type f | head -100
+
+          # Support both ZIP layouts: files directly under extracted/ or inside FakeWalkerX2/.
+          if [ -f extracted/settings.gradle ] && [ -f extracted/app/build.gradle ]; then
+            PROJECT_DIR="extracted"
+          elif [ -f extracted/FakeWalkerX2/settings.gradle ] && [ -f extracted/FakeWalkerX2/app/build.gradle ]; then
+            PROJECT_DIR="extracted/FakeWalkerX2"
+          else
+            echo "Could not locate the Android project root."
+            find extracted -name settings.gradle -o -name settings.gradle.kts
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project root: $PROJECT_DIR"
 
       - name: Build debug APK
-        run: gradle --project-dir extracted/FakeWalkerX2 assembleDebug --stacktrace
+        run: gradle --project-dir "$PROJECT_DIR" assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: FakeWalkerX2-debug-apk
-          path: extracted/FakeWalkerX2/app/build/outputs/apk/debug/*.apk
+          path: extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
