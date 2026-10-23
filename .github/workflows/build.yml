@@ -46,15 +46,15 @@ jobs:
       - name: Check source archive
         shell: bash
         run: |
-          test -f "FakeWalkerX2_全新项目源码-1.zip"
-          unzip -l "FakeWalkerX2_全新项目源码-1.zip" | head -40
+          test -f "FakeWalkerX2_悬浮摇杆优化源码.zip"
+          unzip -l "FakeWalkerX2_悬浮摇杆优化源码.zip" | head -40
 
       - name: Extract Android project
         shell: bash
         run: |
           set -e
           mkdir -p extracted
-          unzip -q "FakeWalkerX2_全新项目源码-1.zip" -d extracted
+          unzip -q "FakeWalkerX2_悬浮摇杆优化源码.zip" -d extracted
           echo "Extracted files:"
           find extracted -maxdepth 4 -type f | head -100
 
