@@ -30,13 +30,13 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Override the action's default package list, which may include the obsolete 'tools' package.
+          packages: 'platform-tools,platforms;android-35,build-tools;35.0.0'
 
-      - name: Install Android SDK components
+      - name: Accept Android SDK licenses
         shell: bash
-        run: |
-          set -e
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        run: yes | sdkmanager --licenses
 
       - name: Check source archive
         shell: bash
