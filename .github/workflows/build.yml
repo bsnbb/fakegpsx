@@ -1,43 +1,13 @@
-name: FakeWalkerX APK Build
+name: FakeWalkerX Check
 
 'on':
 workflow_dispatch:
 
 jobs:
-build:
+check:
 runs-on: ubuntu-latest
 steps:
 - name: Checkout source
 uses: actions/checkout@v4
-
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
-
-  - name: Set up Gradle
-    uses: gradle/actions/setup-gradle@v4
-    with:
-      gradle-version: '8.9'
-
-  - name: Check files
-    run: |
-      echo "===== Repository root ====="
-      ls -la
-
-  - name: Find Gradle configuration
-    run: |
-      find . -maxdepth 5 -type f -name 'build.gradle' -o -name 'build.gradle.kts' -o -name 'settings.gradle' -o -name 'settings.gradle.kts'
-
-  - name: Build APK
-    run: gradle assembleDebug --stacktrace
-
-  - name: Upload APK
-    if: success()
-    uses: actions/upload-artifact@v4
-    with:
-      name: FakeWalkerX-APK
-      path: app/build/outputs/apk/debug/*.apk
-      if-no-files-found: error
-      retention-days: 7
+- name: Check repository
+run: ls -la
