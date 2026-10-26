@@ -1,6 +1,6 @@
-name: FakeWalkerX 2 Build
+name: Android APK Build
 
-'on':
+on:
   workflow_dispatch:
   push:
     branches:
@@ -13,6 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,11 +24,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
@@ -35,50 +31,100 @@ jobs:
         shell: bash
         run: |
           set -e
-          # sdkmanager may exit after accepting licenses, causing `yes` to receive SIGPIPE.
-          # Temporarily disable pipefail for this pipeline so that harmless Broken pipe
-          # from `yes` does not fail the workflow.
-          set +o pipefail
-          yes | sdkmanager --licenses
-          set -o pipefail
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-      - name: Check source archive
+      - name: Find source archive
         shell: bash
         run: |
-          test -f "FakeWalkerX2_悬浮摇杆优化源码.zip"
-          unzip -l "FakeWalkerX2_悬浮摇杆优化源码.zip" | head -40
+          set -e
+
+          ARCHIVE=""
+
+          for f in \
+            "不死鸟助手_定制源码.zip" \
+            "FakeWalkerX2_悬浮摇杆优化源码.zip"
+          do
+            if [ -f "$f" ]; then
+              ARCHIVE="$f"
+              break
+            fi
+          done
+
+          if [ -z "$ARCHIVE" ]; then
+            echo "ERROR: No source ZIP found in repository root."
+            echo "Please upload your source ZIP to the repository root."
+            ls -la
+            exit 1
+          fi
+
+          echo "SOURCE_ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          echo "Using archive: $ARCHIVE"
 
       - name: Extract Android project
         shell: bash
         run: |
           set -e
-          mkdir -p extracted
-          unzip -q "FakeWalkerX2_悬浮摇杆优化源码.zip" -d extracted
-          echo "Extracted files:"
-          find extracted -maxdepth 4 -type f | head -100
 
-          # Support both ZIP layouts: files directly under extracted/ or inside FakeWalkerX2/.
-          if [ -f extracted/settings.gradle ] && [ -f extracted/app/build.gradle ]; then
-            PROJECT_DIR="extracted"
-          elif [ -f extracted/FakeWalkerX2/settings.gradle ] && [ -f extracted/FakeWalkerX2/app/build.gradle ]; then
-            PROJECT_DIR="extracted/FakeWalkerX2"
-          else
-            echo "Could not locate the Android project root."
-            find extracted -name settings.gradle -o -name settings.gradle.kts
+          mkdir -p extracted
+          unzip -q "$SOURCE_ARCHIVE" -d extracted
+
+          echo "Extracted files:"
+          find extracted -maxdepth 5 -type f | head -150
+
+          PROJECT_DIR=""
+
+          while IFS= read -r file; do
+            dir="$(dirname "$file")"
+
+            if [ -f "$dir/app/build.gradle" ] || \
+               [ -f "$dir/app/build.gradle.kts" ]; then
+              PROJECT_DIR="$dir"
+              break
+            fi
+          done < <(
+            find extracted \
+              \( -name settings.gradle -o -name settings.gradle.kts \) \
+              -type f
+          )
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Android project root not found."
+            echo "Expected settings.gradle and app/build.gradle."
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project root: $PROJECT_DIR"
+          echo "Project root: $PROJECT_DIR"
 
       - name: Build debug APK
-        run: gradle --project-dir "$PROJECT_DIR" assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set -e
+
+          cd "$PROJECT_DIR"
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "No Gradle Wrapper found; using Gradle 8.9."
+
+            curl -fsSL \
+              https://services.gradle.org/distributions/gradle-8.9-bin.zip \
+              -o /tmp/gradle.zip
+
+            unzip -q /tmp/gradle.zip -d /tmp
+            /tmp/gradle-8.9/bin/gradle assembleDebug --stacktrace
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: FakeWalkerX2-debug-apk
-          path: extracted/**/app/build/outputs/apk/debug/*.apk
+          name: Android-debug-apk
+          path: |
+            extracted/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
