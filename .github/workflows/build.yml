@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ARCHIVE="不死鸟助手_定制源码.zip"
+          ARCHIVE="不死鸟助手.zip"
 
           if [ ! -f "$ARCHIVE" ]; then
             echo "ERROR: 找不到源码压缩包：$ARCHIVE"
